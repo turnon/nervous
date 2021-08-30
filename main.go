@@ -1,20 +1,17 @@
 package main
 
 import (
-	"embed"
 	"path/filepath"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/turnon/nervous/views"
 )
-
-//go:embed static
-var static embed.FS
 
 func main() {
 	app := fiber.New()
 
 	app.Get("/", func(c *fiber.Ctx) error {
-		bytes := readStatic("cal.html")
+		bytes, _ := views.Render("cal.html", nil)
 		c.Set(fiber.HeaderContentType, fiber.MIMETextHTML)
 		return c.Send(bytes)
 	})
@@ -26,17 +23,9 @@ func main() {
 		} else {
 			c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJavaScript)
 		}
-		bytes := readStatic("lib/" + filename)
+		bytes := views.Lib(filename)
 		return c.Send(bytes)
 	})
 
 	app.Listen(":3000")
-}
-
-func readStatic(name string) []byte {
-	bytes, err := static.ReadFile("static/" + name)
-	if err != nil {
-		panic(err)
-	}
-	return bytes
 }
