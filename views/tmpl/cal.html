@@ -5,10 +5,27 @@
   <meta charset='utf-8' />
   <link href='lib/fullcalendar.min.css' rel='stylesheet' />
   <script src='lib/fullcalendar.min.js'></script>
+  <script src='lib/tool.js'></script>
   <style>
+    body {
+      overflow-y: scroll;
+    }
+
     .calendar {
       padding: 1rem;
-      width: 50%;
+      float: left;
+    }
+
+    .fc .fc-daygrid-day-number {
+      font-size: xx-small;
+    }
+
+    .fc .fc-col-header-cell-cushion {
+      font-size: xx-small;
+    }
+
+    .fc-day-other {
+      visibility: hidden;
     }
   </style>
 </head>
@@ -16,20 +33,53 @@
 <body>
   {{ .EvalObject }}
 
-  <div id="calendars">
-    <div id='calendar1' class="calendar"></div>
-  </div>
+  <div id="calendars"></div>
 
   <script>
-    obj = window.obj || { events: [{ title: "a", start: "2021-09-11" }, { title: "b", start: "2021-09-15", end: "2021-09-17" }] }
-    document.addEventListener('DOMContentLoaded', function () {
-      var calendarEl = document.getElementById('calendar1');
-      var calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        events: obj.events
+    (function () {
+      // data interface
+      var obj = window.obj || {
+        length: 1,
+        events: [
+          { title: "one", start: "2021-09-11" },
+          { title: "two", start: "2021-09-15", end: "2021-09-17" }
+        ]
+      }
+
+      var start_date = Tool.params("start_date") || Tool.todayStr(),
+        layout = Tool.params("layout") || "1x1",
+        horizon = parseInt(layout.split("x")[1]),
+        verical = parseInt(layout.split("x")[0]),
+        length = horizon * verical
+
+      function createCalendar(calendarEl, idx) {
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+          initialView: 'dayGridMonth',
+          showNonCurrentDates: true,
+          headerToolbar: false,
+          // footerToolbar: { center: "title" },
+          events: obj.events
+        });
+        var currentDate = Tool.dateAfterMonths(start_date, idx)
+        calendar.gotoDate(currentDate);
+        calendar.setOption("height", (window.innerHeight * 0.9 / verical))
+        calendar.render();
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        var calendars = document.getElementById('calendars');
+        for (var i = 0; i < length; i++) {
+          var calendarContainer = document.createElement("div")
+          calendarContainer.classList.add('calendar');
+          calendarContainer.style = "width:" + 93 / horizon + "%;"
+          calendars.insertAdjacentElement("beforeEnd", calendarContainer)
+
+          var calendarEl = document.createElement("div")
+          calendarContainer.insertAdjacentElement("beforeEnd", calendarEl)
+          createCalendar(calendarEl, i)
+        }
       });
-      calendar.render();
-    });
+    })()
   </script>
 </body>
 
