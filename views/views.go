@@ -29,7 +29,7 @@ func init() {
 		templates[dirEntry.Name()] = t
 	})
 
-	readDir("lib", func(dir string, dirEntry fs.DirEntry) {
+	readDir("tmpl/lib", func(dir string, dirEntry fs.DirEntry) {
 		fileBytes, _ := views.ReadFile(dir + dirEntry.Name())
 		libs[dirEntry.Name()] = fileBytes
 	})

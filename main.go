@@ -34,8 +34,8 @@ func main() {
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		calPage := calendarPage{Events: []event{
-			{Title: "aaa", Start: "2021-08-21"},
-			{Title: "aaa", Start: "2021-08-25", End: "2021-08-27"},
+			{Title: "aaa", Start: "2021-09-21"},
+			{Title: "aaa", Start: "2021-09-25", End: "2021-09-27"},
 		}}
 
 		bytes, _ := views.Render("cal.html", &jsonObject{calPage})

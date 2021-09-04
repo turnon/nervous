@@ -18,10 +18,10 @@
 
   <div id="calendars">
     <div id='calendar1' class="calendar"></div>
-  </div>}
+  </div>
 
   <script>
-    var obj = JSON.parse(document.querySelector('pre').innerText)
+    obj = window.obj || { events: [{ title: "a", start: "2021-09-11" }, { title: "b", start: "2021-09-15", end: "2021-09-17" }] }
     document.addEventListener('DOMContentLoaded', function () {
       var calendarEl = document.getElementById('calendar1');
       var calendar = new FullCalendar.Calendar(calendarEl, {
