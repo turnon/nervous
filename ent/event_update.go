@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -46,19 +47,15 @@ func (eu *EventUpdate) SetEndAt(t time.Time) *EventUpdate {
 	return eu
 }
 
-// AddTagIDs adds the "tags" edge to the Tag entity by IDs.
-func (eu *EventUpdate) AddTagIDs(ids ...int) *EventUpdate {
-	eu.mutation.AddTagIDs(ids...)
+// SetTagID sets the "tag" edge to the Tag entity by ID.
+func (eu *EventUpdate) SetTagID(id int) *EventUpdate {
+	eu.mutation.SetTagID(id)
 	return eu
 }
 
-// AddTags adds the "tags" edges to the Tag entity.
-func (eu *EventUpdate) AddTags(t ...*Tag) *EventUpdate {
-	ids := make([]int, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
-	}
-	return eu.AddTagIDs(ids...)
+// SetTag sets the "tag" edge to the Tag entity.
+func (eu *EventUpdate) SetTag(t *Tag) *EventUpdate {
+	return eu.SetTagID(t.ID)
 }
 
 // Mutation returns the EventMutation object of the builder.
@@ -66,25 +63,10 @@ func (eu *EventUpdate) Mutation() *EventMutation {
 	return eu.mutation
 }
 
-// ClearTags clears all "tags" edges to the Tag entity.
-func (eu *EventUpdate) ClearTags() *EventUpdate {
-	eu.mutation.ClearTags()
+// ClearTag clears the "tag" edge to the Tag entity.
+func (eu *EventUpdate) ClearTag() *EventUpdate {
+	eu.mutation.ClearTag()
 	return eu
-}
-
-// RemoveTagIDs removes the "tags" edge to Tag entities by IDs.
-func (eu *EventUpdate) RemoveTagIDs(ids ...int) *EventUpdate {
-	eu.mutation.RemoveTagIDs(ids...)
-	return eu
-}
-
-// RemoveTags removes "tags" edges to Tag entities.
-func (eu *EventUpdate) RemoveTags(t ...*Tag) *EventUpdate {
-	ids := make([]int, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
-	}
-	return eu.RemoveTagIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -94,12 +76,18 @@ func (eu *EventUpdate) Save(ctx context.Context) (int, error) {
 		affected int
 	)
 	if len(eu.hooks) == 0 {
+		if err = eu.check(); err != nil {
+			return 0, err
+		}
 		affected, err = eu.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*EventMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = eu.check(); err != nil {
+				return 0, err
 			}
 			eu.mutation = mutation
 			affected, err = eu.sqlSave(ctx)
@@ -141,6 +129,14 @@ func (eu *EventUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (eu *EventUpdate) check() error {
+	if _, ok := eu.mutation.TagID(); eu.mutation.TagCleared() && !ok {
+		return errors.New("ent: clearing a required unique edge \"tag\"")
+	}
+	return nil
+}
+
 func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
@@ -180,12 +176,12 @@ func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: event.FieldEndAt,
 		})
 	}
-	if eu.mutation.TagsCleared() {
+	if eu.mutation.TagCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   event.TagsTable,
-			Columns: event.TagsPrimaryKey,
+			Table:   event.TagTable,
+			Columns: []string{event.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -196,31 +192,12 @@ func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := eu.mutation.RemovedTagsIDs(); len(nodes) > 0 && !eu.mutation.TagsCleared() {
+	if nodes := eu.mutation.TagIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   event.TagsTable,
-			Columns: event.TagsPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := eu.mutation.TagsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   event.TagsTable,
-			Columns: event.TagsPrimaryKey,
+			Table:   event.TagTable,
+			Columns: []string{event.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -271,19 +248,15 @@ func (euo *EventUpdateOne) SetEndAt(t time.Time) *EventUpdateOne {
 	return euo
 }
 
-// AddTagIDs adds the "tags" edge to the Tag entity by IDs.
-func (euo *EventUpdateOne) AddTagIDs(ids ...int) *EventUpdateOne {
-	euo.mutation.AddTagIDs(ids...)
+// SetTagID sets the "tag" edge to the Tag entity by ID.
+func (euo *EventUpdateOne) SetTagID(id int) *EventUpdateOne {
+	euo.mutation.SetTagID(id)
 	return euo
 }
 
-// AddTags adds the "tags" edges to the Tag entity.
-func (euo *EventUpdateOne) AddTags(t ...*Tag) *EventUpdateOne {
-	ids := make([]int, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
-	}
-	return euo.AddTagIDs(ids...)
+// SetTag sets the "tag" edge to the Tag entity.
+func (euo *EventUpdateOne) SetTag(t *Tag) *EventUpdateOne {
+	return euo.SetTagID(t.ID)
 }
 
 // Mutation returns the EventMutation object of the builder.
@@ -291,25 +264,10 @@ func (euo *EventUpdateOne) Mutation() *EventMutation {
 	return euo.mutation
 }
 
-// ClearTags clears all "tags" edges to the Tag entity.
-func (euo *EventUpdateOne) ClearTags() *EventUpdateOne {
-	euo.mutation.ClearTags()
+// ClearTag clears the "tag" edge to the Tag entity.
+func (euo *EventUpdateOne) ClearTag() *EventUpdateOne {
+	euo.mutation.ClearTag()
 	return euo
-}
-
-// RemoveTagIDs removes the "tags" edge to Tag entities by IDs.
-func (euo *EventUpdateOne) RemoveTagIDs(ids ...int) *EventUpdateOne {
-	euo.mutation.RemoveTagIDs(ids...)
-	return euo
-}
-
-// RemoveTags removes "tags" edges to Tag entities.
-func (euo *EventUpdateOne) RemoveTags(t ...*Tag) *EventUpdateOne {
-	ids := make([]int, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
-	}
-	return euo.RemoveTagIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -326,12 +284,18 @@ func (euo *EventUpdateOne) Save(ctx context.Context) (*Event, error) {
 		node *Event
 	)
 	if len(euo.hooks) == 0 {
+		if err = euo.check(); err != nil {
+			return nil, err
+		}
 		node, err = euo.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*EventMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = euo.check(); err != nil {
+				return nil, err
 			}
 			euo.mutation = mutation
 			node, err = euo.sqlSave(ctx)
@@ -371,6 +335,14 @@ func (euo *EventUpdateOne) ExecX(ctx context.Context) {
 	if err := euo.Exec(ctx); err != nil {
 		panic(err)
 	}
+}
+
+// check runs all checks and user-defined validators on the builder.
+func (euo *EventUpdateOne) check() error {
+	if _, ok := euo.mutation.TagID(); euo.mutation.TagCleared() && !ok {
+		return errors.New("ent: clearing a required unique edge \"tag\"")
+	}
+	return nil
 }
 
 func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error) {
@@ -429,12 +401,12 @@ func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error
 			Column: event.FieldEndAt,
 		})
 	}
-	if euo.mutation.TagsCleared() {
+	if euo.mutation.TagCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   event.TagsTable,
-			Columns: event.TagsPrimaryKey,
+			Table:   event.TagTable,
+			Columns: []string{event.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -445,31 +417,12 @@ func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := euo.mutation.RemovedTagsIDs(); len(nodes) > 0 && !euo.mutation.TagsCleared() {
+	if nodes := euo.mutation.TagIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   event.TagsTable,
-			Columns: event.TagsPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := euo.mutation.TagsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   event.TagsTable,
-			Columns: event.TagsPrimaryKey,
+			Table:   event.TagTable,
+			Columns: []string{event.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

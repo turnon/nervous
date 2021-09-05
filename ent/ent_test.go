@@ -55,7 +55,7 @@ func TestConnection(t *testing.T) {
 			SetName("go shopping:" + pid).
 			SetStartAt(happening[0]).
 			SetEndAt(happening[1]).
-			AddTags(tagLiving).
+			SetTag(tagLiving).
 			Save(context.Background())
 		if err != nil {
 			t.Errorf("failed creating event: %w", err)

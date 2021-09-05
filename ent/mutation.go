@@ -38,9 +38,8 @@ type EventMutation struct {
 	start_at      *time.Time
 	end_at        *time.Time
 	clearedFields map[string]struct{}
-	tags          map[int]struct{}
-	removedtags   map[int]struct{}
-	clearedtags   bool
+	tag           *int
+	clearedtag    bool
 	done          bool
 	oldValue      func(context.Context) (*Event, error)
 	predicates    []predicate.Event
@@ -233,58 +232,43 @@ func (m *EventMutation) ResetEndAt() {
 	m.end_at = nil
 }
 
-// AddTagIDs adds the "tags" edge to the Tag entity by ids.
-func (m *EventMutation) AddTagIDs(ids ...int) {
-	if m.tags == nil {
-		m.tags = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.tags[ids[i]] = struct{}{}
-	}
+// SetTagID sets the "tag" edge to the Tag entity by id.
+func (m *EventMutation) SetTagID(id int) {
+	m.tag = &id
 }
 
-// ClearTags clears the "tags" edge to the Tag entity.
-func (m *EventMutation) ClearTags() {
-	m.clearedtags = true
+// ClearTag clears the "tag" edge to the Tag entity.
+func (m *EventMutation) ClearTag() {
+	m.clearedtag = true
 }
 
-// TagsCleared reports if the "tags" edge to the Tag entity was cleared.
-func (m *EventMutation) TagsCleared() bool {
-	return m.clearedtags
+// TagCleared reports if the "tag" edge to the Tag entity was cleared.
+func (m *EventMutation) TagCleared() bool {
+	return m.clearedtag
 }
 
-// RemoveTagIDs removes the "tags" edge to the Tag entity by IDs.
-func (m *EventMutation) RemoveTagIDs(ids ...int) {
-	if m.removedtags == nil {
-		m.removedtags = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.tags, ids[i])
-		m.removedtags[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedTags returns the removed IDs of the "tags" edge to the Tag entity.
-func (m *EventMutation) RemovedTagsIDs() (ids []int) {
-	for id := range m.removedtags {
-		ids = append(ids, id)
+// TagID returns the "tag" edge ID in the mutation.
+func (m *EventMutation) TagID() (id int, exists bool) {
+	if m.tag != nil {
+		return *m.tag, true
 	}
 	return
 }
 
-// TagsIDs returns the "tags" edge IDs in the mutation.
-func (m *EventMutation) TagsIDs() (ids []int) {
-	for id := range m.tags {
-		ids = append(ids, id)
+// TagIDs returns the "tag" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// TagID instead. It exists only for internal usage by the builders.
+func (m *EventMutation) TagIDs() (ids []int) {
+	if id := m.tag; id != nil {
+		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetTags resets all changes to the "tags" edge.
-func (m *EventMutation) ResetTags() {
-	m.tags = nil
-	m.clearedtags = false
-	m.removedtags = nil
+// ResetTag resets all changes to the "tag" edge.
+func (m *EventMutation) ResetTag() {
+	m.tag = nil
+	m.clearedtag = false
 }
 
 // Where appends a list predicates to the EventMutation builder.
@@ -440,8 +424,8 @@ func (m *EventMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *EventMutation) AddedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.tags != nil {
-		edges = append(edges, event.EdgeTags)
+	if m.tag != nil {
+		edges = append(edges, event.EdgeTag)
 	}
 	return edges
 }
@@ -450,12 +434,10 @@ func (m *EventMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *EventMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case event.EdgeTags:
-		ids := make([]ent.Value, 0, len(m.tags))
-		for id := range m.tags {
-			ids = append(ids, id)
+	case event.EdgeTag:
+		if id := m.tag; id != nil {
+			return []ent.Value{*id}
 		}
-		return ids
 	}
 	return nil
 }
@@ -463,9 +445,6 @@ func (m *EventMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *EventMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.removedtags != nil {
-		edges = append(edges, event.EdgeTags)
-	}
 	return edges
 }
 
@@ -473,12 +452,6 @@ func (m *EventMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *EventMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case event.EdgeTags:
-		ids := make([]ent.Value, 0, len(m.removedtags))
-		for id := range m.removedtags {
-			ids = append(ids, id)
-		}
-		return ids
 	}
 	return nil
 }
@@ -486,8 +459,8 @@ func (m *EventMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *EventMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.clearedtags {
-		edges = append(edges, event.EdgeTags)
+	if m.clearedtag {
+		edges = append(edges, event.EdgeTag)
 	}
 	return edges
 }
@@ -496,8 +469,8 @@ func (m *EventMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *EventMutation) EdgeCleared(name string) bool {
 	switch name {
-	case event.EdgeTags:
-		return m.clearedtags
+	case event.EdgeTag:
+		return m.clearedtag
 	}
 	return false
 }
@@ -506,6 +479,9 @@ func (m *EventMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *EventMutation) ClearEdge(name string) error {
 	switch name {
+	case event.EdgeTag:
+		m.ClearTag()
+		return nil
 	}
 	return fmt.Errorf("unknown Event unique edge %s", name)
 }
@@ -514,8 +490,8 @@ func (m *EventMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *EventMutation) ResetEdge(name string) error {
 	switch name {
-	case event.EdgeTags:
-		m.ResetTags()
+	case event.EdgeTag:
+		m.ResetTag()
 		return nil
 	}
 	return fmt.Errorf("unknown Event edge %s", name)

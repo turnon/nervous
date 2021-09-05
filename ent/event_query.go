@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"database/sql/driver"
 	"errors"
 	"fmt"
 	"math"
@@ -27,7 +26,8 @@ type EventQuery struct {
 	fields     []string
 	predicates []predicate.Event
 	// eager-loading edges.
-	withTags *TagQuery
+	withTag *TagQuery
+	withFKs bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -64,8 +64,8 @@ func (eq *EventQuery) Order(o ...OrderFunc) *EventQuery {
 	return eq
 }
 
-// QueryTags chains the current query on the "tags" edge.
-func (eq *EventQuery) QueryTags() *TagQuery {
+// QueryTag chains the current query on the "tag" edge.
+func (eq *EventQuery) QueryTag() *TagQuery {
 	query := &TagQuery{config: eq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := eq.prepareQuery(ctx); err != nil {
@@ -78,7 +78,7 @@ func (eq *EventQuery) QueryTags() *TagQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(event.Table, event.FieldID, selector),
 			sqlgraph.To(tag.Table, tag.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, event.TagsTable, event.TagsPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, true, event.TagTable, event.TagColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -267,21 +267,21 @@ func (eq *EventQuery) Clone() *EventQuery {
 		offset:     eq.offset,
 		order:      append([]OrderFunc{}, eq.order...),
 		predicates: append([]predicate.Event{}, eq.predicates...),
-		withTags:   eq.withTags.Clone(),
+		withTag:    eq.withTag.Clone(),
 		// clone intermediate query.
 		sql:  eq.sql.Clone(),
 		path: eq.path,
 	}
 }
 
-// WithTags tells the query-builder to eager-load the nodes that are connected to
-// the "tags" edge. The optional arguments are used to configure the query builder of the edge.
-func (eq *EventQuery) WithTags(opts ...func(*TagQuery)) *EventQuery {
+// WithTag tells the query-builder to eager-load the nodes that are connected to
+// the "tag" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EventQuery) WithTag(opts ...func(*TagQuery)) *EventQuery {
 	query := &TagQuery{config: eq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	eq.withTags = query
+	eq.withTag = query
 	return eq
 }
 
@@ -349,11 +349,18 @@ func (eq *EventQuery) prepareQuery(ctx context.Context) error {
 func (eq *EventQuery) sqlAll(ctx context.Context) ([]*Event, error) {
 	var (
 		nodes       = []*Event{}
+		withFKs     = eq.withFKs
 		_spec       = eq.querySpec()
 		loadedTypes = [1]bool{
-			eq.withTags != nil,
+			eq.withTag != nil,
 		}
 	)
+	if eq.withTag != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, event.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
 		node := &Event{config: eq.config}
 		nodes = append(nodes, node)
@@ -374,67 +381,31 @@ func (eq *EventQuery) sqlAll(ctx context.Context) ([]*Event, error) {
 		return nodes, nil
 	}
 
-	if query := eq.withTags; query != nil {
-		fks := make([]driver.Value, 0, len(nodes))
-		ids := make(map[int]*Event, len(nodes))
-		for _, node := range nodes {
-			ids[node.ID] = node
-			fks = append(fks, node.ID)
-			node.Edges.Tags = []*Tag{}
+	if query := eq.withTag; query != nil {
+		ids := make([]int, 0, len(nodes))
+		nodeids := make(map[int][]*Event)
+		for i := range nodes {
+			if nodes[i].tag_events == nil {
+				continue
+			}
+			fk := *nodes[i].tag_events
+			if _, ok := nodeids[fk]; !ok {
+				ids = append(ids, fk)
+			}
+			nodeids[fk] = append(nodeids[fk], nodes[i])
 		}
-		var (
-			edgeids []int
-			edges   = make(map[int][]*Event)
-		)
-		_spec := &sqlgraph.EdgeQuerySpec{
-			Edge: &sqlgraph.EdgeSpec{
-				Inverse: true,
-				Table:   event.TagsTable,
-				Columns: event.TagsPrimaryKey,
-			},
-			Predicate: func(s *sql.Selector) {
-				s.Where(sql.InValues(event.TagsPrimaryKey[1], fks...))
-			},
-			ScanValues: func() [2]interface{} {
-				return [2]interface{}{new(sql.NullInt64), new(sql.NullInt64)}
-			},
-			Assign: func(out, in interface{}) error {
-				eout, ok := out.(*sql.NullInt64)
-				if !ok || eout == nil {
-					return fmt.Errorf("unexpected id value for edge-out")
-				}
-				ein, ok := in.(*sql.NullInt64)
-				if !ok || ein == nil {
-					return fmt.Errorf("unexpected id value for edge-in")
-				}
-				outValue := int(eout.Int64)
-				inValue := int(ein.Int64)
-				node, ok := ids[outValue]
-				if !ok {
-					return fmt.Errorf("unexpected node id in edges: %v", outValue)
-				}
-				if _, ok := edges[inValue]; !ok {
-					edgeids = append(edgeids, inValue)
-				}
-				edges[inValue] = append(edges[inValue], node)
-				return nil
-			},
-		}
-		if err := sqlgraph.QueryEdges(ctx, eq.driver, _spec); err != nil {
-			return nil, fmt.Errorf(`query edges "tags": %w`, err)
-		}
-		query.Where(tag.IDIn(edgeids...))
+		query.Where(tag.IDIn(ids...))
 		neighbors, err := query.All(ctx)
 		if err != nil {
 			return nil, err
 		}
 		for _, n := range neighbors {
-			nodes, ok := edges[n.ID]
+			nodes, ok := nodeids[n.ID]
 			if !ok {
-				return nil, fmt.Errorf(`unexpected "tags" node returned %v`, n.ID)
+				return nil, fmt.Errorf(`unexpected foreign-key "tag_events" returned %v`, n.ID)
 			}
 			for i := range nodes {
-				nodes[i].Edges.Tags = append(nodes[i].Edges.Tags, n)
+				nodes[i].Edges.Tag = n
 			}
 		}
 	}

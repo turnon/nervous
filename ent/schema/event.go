@@ -23,6 +23,6 @@ func (Event) Fields() []ent.Field {
 // Edges of the Event.
 func (Event) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("tags", Tag.Type).Ref("events"),
+		edge.From("tag", Tag.Type).Ref("events").Unique().Required(),
 	}
 }

@@ -14,12 +14,21 @@ var (
 		{Name: "name", Type: field.TypeString},
 		{Name: "start_at", Type: field.TypeTime},
 		{Name: "end_at", Type: field.TypeTime},
+		{Name: "tag_events", Type: field.TypeInt, Nullable: true},
 	}
 	// EventsTable holds the schema information for the "events" table.
 	EventsTable = &schema.Table{
 		Name:       "events",
 		Columns:    EventsColumns,
 		PrimaryKey: []*schema.Column{EventsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "events_tags_events",
+				Columns:    []*schema.Column{EventsColumns[4]},
+				RefColumns: []*schema.Column{TagsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 	}
 	// TagsColumns holds the columns for the "tags" table.
 	TagsColumns = []*schema.Column{
@@ -32,40 +41,13 @@ var (
 		Columns:    TagsColumns,
 		PrimaryKey: []*schema.Column{TagsColumns[0]},
 	}
-	// TagEventsColumns holds the columns for the "tag_events" table.
-	TagEventsColumns = []*schema.Column{
-		{Name: "tag_id", Type: field.TypeInt},
-		{Name: "event_id", Type: field.TypeInt},
-	}
-	// TagEventsTable holds the schema information for the "tag_events" table.
-	TagEventsTable = &schema.Table{
-		Name:       "tag_events",
-		Columns:    TagEventsColumns,
-		PrimaryKey: []*schema.Column{TagEventsColumns[0], TagEventsColumns[1]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "tag_events_tag_id",
-				Columns:    []*schema.Column{TagEventsColumns[0]},
-				RefColumns: []*schema.Column{TagsColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-			{
-				Symbol:     "tag_events_event_id",
-				Columns:    []*schema.Column{TagEventsColumns[1]},
-				RefColumns: []*schema.Column{EventsColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
-	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		EventsTable,
 		TagsTable,
-		TagEventsTable,
 	}
 )
 
 func init() {
-	TagEventsTable.ForeignKeys[0].RefTable = TagsTable
-	TagEventsTable.ForeignKeys[1].RefTable = EventsTable
+	EventsTable.ForeignKeys[0].RefTable = TagsTable
 }

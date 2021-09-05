@@ -214,15 +214,15 @@ func (c *EventClient) GetX(ctx context.Context, id int) *Event {
 	return obj
 }
 
-// QueryTags queries the tags edge of a Event.
-func (c *EventClient) QueryTags(e *Event) *TagQuery {
+// QueryTag queries the tag edge of a Event.
+func (c *EventClient) QueryTag(e *Event) *TagQuery {
 	query := &TagQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := e.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(event.Table, event.FieldID, id),
 			sqlgraph.To(tag.Table, tag.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, event.TagsTable, event.TagsPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, true, event.TagTable, event.TagColumn),
 		)
 		fromV = sqlgraph.Neighbors(e.driver.Dialect(), step)
 		return fromV, nil
@@ -328,7 +328,7 @@ func (c *TagClient) QueryEvents(t *Tag) *EventQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(tag.Table, tag.FieldID, id),
 			sqlgraph.To(event.Table, event.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, tag.EventsTable, tag.EventsPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.O2M, false, tag.EventsTable, tag.EventsColumn),
 		)
 		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
 		return fromV, nil

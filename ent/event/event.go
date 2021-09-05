@@ -13,15 +13,17 @@ const (
 	FieldStartAt = "start_at"
 	// FieldEndAt holds the string denoting the end_at field in the database.
 	FieldEndAt = "end_at"
-	// EdgeTags holds the string denoting the tags edge name in mutations.
-	EdgeTags = "tags"
+	// EdgeTag holds the string denoting the tag edge name in mutations.
+	EdgeTag = "tag"
 	// Table holds the table name of the event in the database.
 	Table = "events"
-	// TagsTable is the table that holds the tags relation/edge. The primary key declared below.
-	TagsTable = "tag_events"
-	// TagsInverseTable is the table name for the Tag entity.
+	// TagTable is the table that holds the tag relation/edge.
+	TagTable = "events"
+	// TagInverseTable is the table name for the Tag entity.
 	// It exists in this package in order to avoid circular dependency with the "tag" package.
-	TagsInverseTable = "tags"
+	TagInverseTable = "tags"
+	// TagColumn is the table column denoting the tag relation/edge.
+	TagColumn = "tag_events"
 )
 
 // Columns holds all SQL columns for event fields.
@@ -32,16 +34,21 @@ var Columns = []string{
 	FieldEndAt,
 }
 
-var (
-	// TagsPrimaryKey and TagsColumn2 are the table columns denoting the
-	// primary key for the tags relation (M2M).
-	TagsPrimaryKey = []string{"tag_id", "event_id"}
-)
+// ForeignKeys holds the SQL foreign-keys that are owned by the "events"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"tag_events",
+}
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
+			return true
+		}
+	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
 			return true
 		}
 	}

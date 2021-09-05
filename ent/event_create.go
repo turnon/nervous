@@ -39,19 +39,15 @@ func (ec *EventCreate) SetEndAt(t time.Time) *EventCreate {
 	return ec
 }
 
-// AddTagIDs adds the "tags" edge to the Tag entity by IDs.
-func (ec *EventCreate) AddTagIDs(ids ...int) *EventCreate {
-	ec.mutation.AddTagIDs(ids...)
+// SetTagID sets the "tag" edge to the Tag entity by ID.
+func (ec *EventCreate) SetTagID(id int) *EventCreate {
+	ec.mutation.SetTagID(id)
 	return ec
 }
 
-// AddTags adds the "tags" edges to the Tag entity.
-func (ec *EventCreate) AddTags(t ...*Tag) *EventCreate {
-	ids := make([]int, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
-	}
-	return ec.AddTagIDs(ids...)
+// SetTag sets the "tag" edge to the Tag entity.
+func (ec *EventCreate) SetTag(t *Tag) *EventCreate {
+	return ec.SetTagID(t.ID)
 }
 
 // Mutation returns the EventMutation object of the builder.
@@ -133,6 +129,9 @@ func (ec *EventCreate) check() error {
 	if _, ok := ec.mutation.EndAt(); !ok {
 		return &ValidationError{Name: "end_at", err: errors.New(`ent: missing required field "end_at"`)}
 	}
+	if _, ok := ec.mutation.TagID(); !ok {
+		return &ValidationError{Name: "tag", err: errors.New("ent: missing required edge \"tag\"")}
+	}
 	return nil
 }
 
@@ -184,12 +183,12 @@ func (ec *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 		})
 		_node.EndAt = value
 	}
-	if nodes := ec.mutation.TagsIDs(); len(nodes) > 0 {
+	if nodes := ec.mutation.TagIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   event.TagsTable,
-			Columns: event.TagsPrimaryKey,
+			Table:   event.TagTable,
+			Columns: []string{event.TagColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -201,6 +200,7 @@ func (ec *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_node.tag_events = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

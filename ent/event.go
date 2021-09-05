@@ -9,6 +9,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/turnon/nervous/ent/event"
+	"github.com/turnon/nervous/ent/tag"
 )
 
 // Event is the model entity for the Event schema.
@@ -24,25 +25,31 @@ type Event struct {
 	EndAt time.Time `json:"end_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the EventQuery when eager-loading is set.
-	Edges EventEdges `json:"edges"`
+	Edges      EventEdges `json:"edges"`
+	tag_events *int
 }
 
 // EventEdges holds the relations/edges for other nodes in the graph.
 type EventEdges struct {
-	// Tags holds the value of the tags edge.
-	Tags []*Tag `json:"tags,omitempty"`
+	// Tag holds the value of the tag edge.
+	Tag *Tag `json:"tag,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
 }
 
-// TagsOrErr returns the Tags value or an error if the edge
-// was not loaded in eager-loading.
-func (e EventEdges) TagsOrErr() ([]*Tag, error) {
+// TagOrErr returns the Tag value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e EventEdges) TagOrErr() (*Tag, error) {
 	if e.loadedTypes[0] {
-		return e.Tags, nil
+		if e.Tag == nil {
+			// The edge tag was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: tag.Label}
+		}
+		return e.Tag, nil
 	}
-	return nil, &NotLoadedError{edge: "tags"}
+	return nil, &NotLoadedError{edge: "tag"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -56,6 +63,8 @@ func (*Event) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullString)
 		case event.FieldStartAt, event.FieldEndAt:
 			values[i] = new(sql.NullTime)
+		case event.ForeignKeys[0]: // tag_events
+			values[i] = new(sql.NullInt64)
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Event", columns[i])
 		}
@@ -95,14 +104,21 @@ func (e *Event) assignValues(columns []string, values []interface{}) error {
 			} else if value.Valid {
 				e.EndAt = value.Time
 			}
+		case event.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field tag_events", value)
+			} else if value.Valid {
+				e.tag_events = new(int)
+				*e.tag_events = int(value.Int64)
+			}
 		}
 	}
 	return nil
 }
 
-// QueryTags queries the "tags" edge of the Event entity.
-func (e *Event) QueryTags() *TagQuery {
-	return (&EventClient{config: e.config}).QueryTags(e)
+// QueryTag queries the "tag" edge of the Event entity.
+func (e *Event) QueryTag() *TagQuery {
+	return (&EventClient{config: e.config}).QueryTag(e)
 }
 
 // Update returns a builder for updating this Event.
