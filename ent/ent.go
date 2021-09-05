@@ -9,6 +9,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/turnon/nervous/ent/event"
+	"github.com/turnon/nervous/ent/tag"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -30,6 +31,7 @@ type OrderFunc func(*sql.Selector)
 func columnChecker(table string) func(string) error {
 	checks := map[string]func(string) bool{
 		event.Table: event.ValidColumn,
+		tag.Table:   tag.ValidColumn,
 	}
 	check, ok := checks[table]
 	if !ok {

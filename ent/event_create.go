@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/turnon/nervous/ent/event"
+	"github.com/turnon/nervous/ent/tag"
 )
 
 // EventCreate is the builder for creating a Event entity.
@@ -36,6 +37,21 @@ func (ec *EventCreate) SetStartAt(t time.Time) *EventCreate {
 func (ec *EventCreate) SetEndAt(t time.Time) *EventCreate {
 	ec.mutation.SetEndAt(t)
 	return ec
+}
+
+// AddTagIDs adds the "tags" edge to the Tag entity by IDs.
+func (ec *EventCreate) AddTagIDs(ids ...int) *EventCreate {
+	ec.mutation.AddTagIDs(ids...)
+	return ec
+}
+
+// AddTags adds the "tags" edges to the Tag entity.
+func (ec *EventCreate) AddTags(t ...*Tag) *EventCreate {
+	ids := make([]int, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return ec.AddTagIDs(ids...)
 }
 
 // Mutation returns the EventMutation object of the builder.
@@ -167,6 +183,25 @@ func (ec *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 			Column: event.FieldEndAt,
 		})
 		_node.EndAt = value
+	}
+	if nodes := ec.mutation.TagsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   event.TagsTable,
+			Columns: event.TagsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: tag.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

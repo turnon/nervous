@@ -22,6 +22,27 @@ type Event struct {
 	StartAt time.Time `json:"start_at,omitempty"`
 	// EndAt holds the value of the "end_at" field.
 	EndAt time.Time `json:"end_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the EventQuery when eager-loading is set.
+	Edges EventEdges `json:"edges"`
+}
+
+// EventEdges holds the relations/edges for other nodes in the graph.
+type EventEdges struct {
+	// Tags holds the value of the tags edge.
+	Tags []*Tag `json:"tags,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// TagsOrErr returns the Tags value or an error if the edge
+// was not loaded in eager-loading.
+func (e EventEdges) TagsOrErr() ([]*Tag, error) {
+	if e.loadedTypes[0] {
+		return e.Tags, nil
+	}
+	return nil, &NotLoadedError{edge: "tags"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -77,6 +98,11 @@ func (e *Event) assignValues(columns []string, values []interface{}) error {
 		}
 	}
 	return nil
+}
+
+// QueryTags queries the "tags" edge of the Event entity.
+func (e *Event) QueryTags() *TagQuery {
+	return (&EventClient{config: e.config}).QueryTags(e)
 }
 
 // Update returns a builder for updating this Event.
