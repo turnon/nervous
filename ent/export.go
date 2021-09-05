@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/turnon/nervous/ent/event"
 )
 

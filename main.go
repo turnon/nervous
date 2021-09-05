@@ -3,8 +3,12 @@ package main
 import (
 	"encoding/json"
 	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/turnon/nervous/ent"
 	"github.com/turnon/nervous/views"
 )
 
@@ -20,7 +24,7 @@ func (j *jsonObject) EvalObject() string {
 }
 
 type calendarPage struct {
-	Events []event `json:"events"`
+	Events []*event `json:"events"`
 }
 
 type event struct {
@@ -33,10 +37,17 @@ func main() {
 	app := fiber.New()
 
 	app.Get("/", func(c *fiber.Ctx) error {
-		calPage := calendarPage{Events: []event{
-			{Title: "aaa", Start: "2021-09-21"},
-			{Title: "aaa", Start: "2021-09-25", End: "2021-09-27"},
-		}}
+		calPage := calendarPage{}
+
+		start_at := c.Query("start", time.Now().Format("2006-01-02"))
+		hv := strings.Split(c.Query("layout", "1x1"), "x")
+		h, _ := strconv.Atoi(hv[0])
+		v, _ := strconv.Atoi(hv[1])
+		events := ent.LoadEvents(start_at, h*v)
+
+		for _, e := range events {
+			calPage.Events = append(calPage.Events, &event{Title: e.Name, Start: e.StartAt.Format("2006-01-02"), End: e.EndAt.Format("2006-01-02")})
+		}
 
 		bytes, _ := views.Render("cal.html", &jsonObject{calPage})
 		c.Set(fiber.HeaderContentType, fiber.MIMETextHTML)

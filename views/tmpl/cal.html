@@ -46,7 +46,7 @@
         ]
       }
 
-      var start_date = Tool.params("start_date") || Tool.todayStr(),
+      var start_date = Tool.params("start") || Tool.todayStr(),
         layout = Tool.params("layout") || "1x1",
         horizon = parseInt(layout.split("x")[1]),
         verical = parseInt(layout.split("x")[0]),
@@ -57,7 +57,7 @@
           initialView: 'dayGridMonth',
           showNonCurrentDates: true,
           headerToolbar: false,
-          // footerToolbar: { center: "title" },
+          footerToolbar: { center: "title" },
           events: obj.events
         });
         var currentDate = Tool.dateAfterMonths(start_date, idx)
