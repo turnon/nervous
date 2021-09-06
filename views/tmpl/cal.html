@@ -11,6 +11,11 @@
       overflow-y: scroll;
     }
 
+    #calendars {
+      display: inline-block;
+      width: 75%;
+    }
+
     .calendar {
       padding: 1rem;
       float: left;
@@ -27,13 +32,36 @@
     .fc-day-other {
       visibility: hidden;
     }
+
+    #add-events {
+      display: inline-block;
+      vertical-align: top;
+      padding: 1% 0 0 0;
+      background-color: #ffffffba;
+      width: 23%;
+    }
+
+    label {
+      display: inline-block;
+      width: 80px;
+    }
   </style>
 </head>
 
 <body>
-  {{ .EvalObject }}
+  <div style="display:none">{{ .EvalObject }}</div>
 
   <div id="calendars"></div>
+  <div id="add-events">
+    <form action="/new" method="post">
+      <label style="vertical-align:top">dates:</label>
+      <div id="selected-dates" style="display:inline-block;margin-left: -5px;"></div><br>
+      <label>tag:</label><input type="text" name="tag"><br>
+      <label>name:</label><input type="text" name="name"><br>
+      <label>continue:</label><input type="text" name="continue"><br>
+      <input type="submit" value="Submit" style="margin: 30px 0 0 30%;">
+    </form>
+  </div>
 
   <script>
     (function () {
@@ -52,12 +80,40 @@
         verical = parseInt(layout.split("x")[0]),
         length = horizon * verical
 
+      // add events
+      var addEventsForm = (function () {
+        var selectedDates = {},
+          elSelectedDates = document.getElementById("selected-dates")
+        elAddEventsForm = document.getElementById('add-events')
+
+        function pre_add_event(info) {
+          if (selectedDates[info.dateStr]) return;
+          var input = "<div><input type='text' name='dates' value='" + info.dateStr + "'>&nbsp;<button class='remove-date'>x</button></div>"
+          elSelectedDates.insertAdjacentHTML("beforeend", input)
+          selectedDates[info.dateStr] = true
+          elAddEventsForm.classList.add('expand-form')
+        }
+
+        elSelectedDates.addEventListener("click", function (e) {
+          if (e.target.classList.contains('remove-date')) {
+            delete selectedDates[e.target.previousElementSibling.value]
+            e.target.parentElement.remove()
+            e.stopPropagation()
+          }
+        })
+
+        return {
+          pre_add_event: pre_add_event
+        }
+      })()
+
       function createCalendar(calendarEl, idx) {
         var calendar = new FullCalendar.Calendar(calendarEl, {
           initialView: 'dayGridMonth',
           showNonCurrentDates: true,
           headerToolbar: false,
           footerToolbar: { center: "title" },
+          dateClick: addEventsForm.pre_add_event,
           events: obj.events
         });
         var currentDate = Tool.dateAfterMonths(start_date, idx)
