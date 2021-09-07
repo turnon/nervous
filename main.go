@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/turnon/nervous/db"
 	"github.com/turnon/nervous/ent"
 	"github.com/turnon/nervous/views"
 )
@@ -42,18 +43,20 @@ type newEvents struct {
 
 func main() {
 	app := fiber.New()
+	var dbHandler db.DbHandler = &ent.DbHandler{}
 
 	app.Get("/", func(c *fiber.Ctx) error {
+
 		calPage := calendarPage{}
 
 		start_at := c.Query("start", time.Now().Format("2006-01-02"))
 		hv := strings.Split(c.Query("layout", "1x1"), "x")
 		h, _ := strconv.Atoi(hv[0])
 		v, _ := strconv.Atoi(hv[1])
-		events := ent.LoadEvents(start_at, h*v)
+		events := dbHandler.LoadEvents(start_at, h*v)
 
 		for _, e := range events {
-			calPage.Events = append(calPage.Events, &event{Title: e.Name, Start: e.StartAt.Format("2006-01-02"), End: e.EndAt.Format("2006-01-02")})
+			calPage.Events = append(calPage.Events, &event{Title: e.Name, Start: e.StartAt, End: e.EndAt})
 		}
 
 		bytes, _ := views.Render("cal.html", &jsonObject{calPage})
@@ -64,7 +67,7 @@ func main() {
 	app.Post("/new", func(c *fiber.Ctx) error {
 		ne := newEvents{}
 		c.BodyParser(&ne)
-		ent.NewEvents(ne.Dates, ne.Tag, ne.Name, ne.Continuous)
+		dbHandler.NewEvents(ne.Dates, ne.Tag, ne.Name, ne.Continuous)
 		return c.Redirect("/")
 	})
 

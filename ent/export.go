@@ -6,6 +6,7 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/turnon/nervous/db"
 	"github.com/turnon/nervous/ent/event"
 	"github.com/turnon/nervous/ent/tag"
 )
@@ -29,21 +30,35 @@ func init() {
 	xclient = c
 }
 
-func LoadEvents(date string, months int) []*Event {
+type DbHandler struct {
+}
+
+func (*DbHandler) LoadEvents(date string, months int) []*db.Event {
 	t, _ := time.Parse("2006-01-02", date)
 	start_at := t.AddDate(0, -1, 0)
 	end_at := t.AddDate(0, months, 0)
 
-	return xclient.Debug().Event.Query().
+	events := xclient.Debug().Event.Query().
 		Where(event.StartAtLTE(end_at), event.EndAtGTE(start_at)).
 		Order(Asc(event.FieldStartAt), Asc(event.FieldEndAt)).
 		AllX(context.Background())
+
+	var outEvent []*db.Event
+	for _, e := range events {
+		outEvent = append(outEvent, &db.Event{
+			Name:    e.Name,
+			StartAt: e.StartAt.Format("2006-01-02"),
+			EndAt:   e.EndAt.Format("2006-01-02"),
+		})
+	}
+
+	return outEvent
 }
 
-func NewEvents(dates []string, tagName string, eventName string, days int) []*Event {
+func (*DbHandler) NewEvents(dates []string, tagName string, eventName string, days int) error {
 	tx, err := xclient.Debug().Tx(context.Background())
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer tx.Commit()
 
