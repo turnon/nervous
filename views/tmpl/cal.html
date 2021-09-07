@@ -7,6 +7,10 @@
   <script src='lib/fullcalendar.min.js'></script>
   <script src='lib/tool.js'></script>
   <style>
+    :root {
+      --panel-bg-color: #009688;
+    }
+
     body {
       overflow-y: scroll;
     }
@@ -23,13 +27,26 @@
     #add-events {
       vertical-align: top;
       padding: 1% 0 0 0;
-      background-color: #ffffffba;
       width: 350px;
     }
 
+    input {
+      border: 1px white solid;
+      color: white;
+      background-color: var(--panel-bg-color);
+    }
+
     label {
+      color: white;
       display: inline-block;
       width: 80px;
+    }
+
+    button {
+      border: 1px solid white;
+      color: white;
+      background: var(--panel-bg-color);
+      cursor: pointer;
     }
 
     .narrow-cal {
@@ -51,8 +68,10 @@
     .close {
       float: right;
       margin: 0;
-      font-family: none;
+      font-family: cursive;
       cursor: pointer;
+      color: white;
+      font-size: xx-large;
     }
   </style>
   <style>
@@ -89,16 +108,19 @@
   <div id="calendars" class="wide-cal"></div>
 
   <div id="add-events" class="close-panel">
-    <pre class="close">X</pre>
+    <pre class="close">></pre>
     <form action="/new" method="post">
       <label style="vertical-align:top">dates:</label>
-      <div id="selected-dates" style="display:inline-block;margin-left: -5px;"></div><br>
+      <div id="selected-dates" style="display:inline-block;margin-left: -4px;"></div><br>
       <label>tag:</label><input type="text" name="tag"><br>
       <label>name:</label><input type="text" name="name"><br>
       <label>continue:</label><input type="text" name="continue"><br>
       <input type="submit" value="Submit" style="margin: 30px 0 0 30%;">
     </form>
   </div>
+
+  <div id="panel-bg" class="close-panel"
+    style="position: fixed;width: 390px;background-color:var(--panel-bg-color);right:0;top:0;bottom:0;z-index:-1;" />
 
   <script>
     (function () {
@@ -119,7 +141,9 @@
 
       // panel
       var panel = (function () {
-        var currentPanel = null
+        var currentPanel = null,
+          panelBg = document.querySelector("#panel-bg")
+
         document.querySelector(".close").addEventListener("click", close)
 
         function close(by_close_button) {
@@ -132,6 +156,7 @@
             calendars.wide()
             calendars.render()
           }
+          panelBg.classList.add('close-panel')
         }
 
         function open(el) {
@@ -139,6 +164,7 @@
           currentPanel = el
           currentPanel.classList.add('open-panel')
           currentPanel.classList.remove('close-panel')
+          panelBg.classList.remove('close-panel')
           calendars.narrow()
           calendars.render()
         }
