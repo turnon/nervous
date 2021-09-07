@@ -25,13 +25,7 @@ func (j *jsonObject) EvalObject() string {
 }
 
 type calendarPage struct {
-	Events []*event `json:"events"`
-}
-
-type event struct {
-	Title string `json:"title"`
-	Start string `json:"start"`
-	End   string `json:"end"`
+	Events []*db.Event `json:"events"`
 }
 
 type newEvents struct {
@@ -46,7 +40,6 @@ func main() {
 	var dbHandler db.DbHandler = &ent.DbHandler{}
 
 	app.Get("/", func(c *fiber.Ctx) error {
-
 		calPage := calendarPage{}
 
 		start_at := c.Query("start", time.Now().Format("2006-01-02"))
@@ -54,10 +47,7 @@ func main() {
 		h, _ := strconv.Atoi(hv[0])
 		v, _ := strconv.Atoi(hv[1])
 		events := dbHandler.LoadEvents(start_at, h*v)
-
-		for _, e := range events {
-			calPage.Events = append(calPage.Events, &event{Title: e.Name, Start: e.StartAt, End: e.EndAt})
-		}
+		calPage.Events = events
 
 		bytes, _ := views.Render("cal.html", &jsonObject{calPage})
 		c.Set(fiber.HeaderContentType, fiber.MIMETextHTML)

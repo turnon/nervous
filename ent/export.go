@@ -46,9 +46,9 @@ func (*DbHandler) LoadEvents(date string, months int) []*db.Event {
 	var outEvent []*db.Event
 	for _, e := range events {
 		outEvent = append(outEvent, &db.Event{
-			Name:    e.Name,
-			StartAt: e.StartAt.Format("2006-01-02"),
-			EndAt:   e.EndAt.Format("2006-01-02"),
+			Title: e.Name,
+			Start: e.StartAt.Format("2006-01-02"),
+			End:   e.EndAt.Format("2006-01-02"),
 		})
 	}
 
