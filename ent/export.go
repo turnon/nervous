@@ -7,6 +7,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/turnon/nervous/ent/event"
+	"github.com/turnon/nervous/ent/tag"
 )
 
 var xclient *Client
@@ -37,4 +38,42 @@ func LoadEvents(date string, months int) []*Event {
 		Where(event.StartAtLTE(end_at), event.EndAtGTE(start_at)).
 		Order(Asc(event.FieldStartAt), Asc(event.FieldEndAt)).
 		AllX(context.Background())
+}
+
+func NewEvents(dates []string, tagName string, eventName string, days int) []*Event {
+	tx, err := xclient.Debug().Tx(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	defer tx.Commit()
+
+	if days == 0 {
+		days = 1
+	}
+
+	tagObj, err := tx.Tag.Query().Where(tag.Name(tagName)).Only(context.Background())
+	if _, ok := err.(*NotFoundError); ok {
+		tagObj = tx.Tag.Create().SetName(tagName).SaveX(context.Background())
+	}
+
+	for _, date := range dates {
+		startAt := parseTime(date)
+		endAt := parseTime(date).AddDate(0, 0, days)
+		tx.Event.Create().
+			SetStartAt(startAt).
+			SetEndAt(endAt).
+			SetName(eventName).
+			SetTag(tagObj).
+			Save(context.Background())
+	}
+
+	return nil
+}
+
+func parseTime(str string) time.Time {
+	rt, err := time.Parse("2006-1-2", str)
+	if err != nil {
+		panic(err)
+	}
+	return rt
 }

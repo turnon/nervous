@@ -7,8 +7,16 @@
   <script src='lib/fullcalendar.min.js'></script>
   <script src='lib/tool.js'></script>
   <style>
+    :root {
+      --panel-bg-color: #009688;
+    }
+
     body {
       overflow-y: scroll;
+    }
+
+    #calendars {
+      display: inline-block;
     }
 
     .calendar {
@@ -16,8 +24,61 @@
       float: left;
     }
 
+    #add-events {
+      vertical-align: top;
+      padding: 1% 0 0 0;
+      width: 350px;
+    }
+
+    input {
+      border: 1px white solid;
+      color: white;
+      background-color: var(--panel-bg-color);
+    }
+
+    label {
+      color: white;
+      display: inline-block;
+      width: 80px;
+    }
+
+    button {
+      border: 1px solid white;
+      color: white;
+      background: var(--panel-bg-color);
+      cursor: pointer;
+    }
+
+    .narrow-cal {
+      width: calc(100% - 370px);
+    }
+
+    .wide-cal {
+      width: 100%;
+    }
+
+    .open-panel {
+      display: inline-block;
+    }
+
+    .close-panel {
+      display: none;
+    }
+
+    .close {
+      float: right;
+      margin: 0;
+      font-family: cursive;
+      cursor: pointer;
+      color: white;
+      font-size: xx-large;
+    }
+  </style>
+  <style>
     .fc .fc-daygrid-day-number {
       font-size: xx-small;
+      padding-top: 0;
+      padding-bottom: 0;
     }
 
     .fc .fc-col-header-cell-cushion {
@@ -27,13 +88,39 @@
     .fc-day-other {
       visibility: hidden;
     }
+
+    .fc .fc-toolbar.fc-footer-toolbar {
+      margin-top: .5em;
+      margin-left: .2em;
+    }
+
+    .fc .fc-toolbar-title {
+      font-size: 1em;
+      color: lightgray;
+      font-style: italic;
+    }
   </style>
 </head>
 
 <body>
-  {{ .EvalObject }}
+  <div style="display:none">{{ .EvalObject }}</div>
 
-  <div id="calendars"></div>
+  <div id="calendars" class="wide-cal"></div>
+
+  <div id="add-events" class="close-panel">
+    <pre class="close">></pre>
+    <form action="/new" method="post">
+      <label style="vertical-align:top">dates:</label>
+      <div id="selected-dates" style="display:inline-block;margin-left: -4px;"></div><br>
+      <label>tag:</label><input type="text" name="tag"><br>
+      <label>name:</label><input type="text" name="name"><br>
+      <label>continue:</label><input type="text" name="continue"><br>
+      <input type="submit" value="Submit" style="margin: 30px 0 0 30%;">
+    </form>
+  </div>
+
+  <div id="panel-bg" class="close-panel"
+    style="position: fixed;width: 390px;background-color:var(--panel-bg-color);right:0;top:0;bottom:0;z-index:-1;" />
 
   <script>
     (function () {
@@ -52,33 +139,120 @@
         verical = parseInt(layout.split("x")[0]),
         length = horizon * verical
 
-      function createCalendar(calendarEl, idx) {
-        var calendar = new FullCalendar.Calendar(calendarEl, {
-          initialView: 'dayGridMonth',
-          showNonCurrentDates: true,
-          headerToolbar: false,
-          footerToolbar: { center: "title" },
-          events: obj.events
-        });
-        var currentDate = Tool.dateAfterMonths(start_date, idx)
-        calendar.gotoDate(currentDate);
-        calendar.setOption("height", (window.innerHeight * 0.9 / verical))
-        calendar.render();
-      }
+      // panel
+      var panel = (function () {
+        var currentPanel = null,
+          panelBg = document.querySelector("#panel-bg")
 
-      document.addEventListener('DOMContentLoaded', function () {
-        var calendars = document.getElementById('calendars');
-        for (var i = 0; i < length; i++) {
-          var calendarContainer = document.createElement("div")
-          calendarContainer.classList.add('calendar');
-          calendarContainer.style = "width:" + 93 / horizon + "%;"
-          calendars.insertAdjacentElement("beforeEnd", calendarContainer)
+        document.querySelector(".close").addEventListener("click", close)
 
-          var calendarEl = document.createElement("div")
-          calendarContainer.insertAdjacentElement("beforeEnd", calendarEl)
-          createCalendar(calendarEl, i)
+        function close(by_close_button) {
+          if (currentPanel) {
+            currentPanel.classList.remove('open-panel')
+            currentPanel.classList.add('close-panel')
+            currentPanel = null
+          }
+          if (by_close_button) {
+            calendars.wide()
+            calendars.render()
+          }
+          panelBg.classList.add('close-panel')
         }
-      });
+
+        function open(el) {
+          close(false)
+          currentPanel = el
+          currentPanel.classList.add('open-panel')
+          currentPanel.classList.remove('close-panel')
+          panelBg.classList.remove('close-panel')
+          calendars.narrow()
+          calendars.render()
+        }
+
+        return {
+          open: open
+        }
+      })()
+
+      // form to add events
+      var add_events_form = (function () {
+        var selectedDates = {},
+          elSelectedDates = document.getElementById("selected-dates")
+        elAddEventsForm = document.getElementById('add-events')
+
+        function pre_add_event(info) {
+          panel.open(elAddEventsForm)
+          if (selectedDates[info.dateStr]) return;
+          var input = "<div><input type='text' name='dates[]' value='" + info.dateStr + "'>&nbsp;<button class='remove-date'>-</button></div>"
+          elSelectedDates.insertAdjacentHTML("beforeend", input)
+          selectedDates[info.dateStr] = true
+        }
+
+        elSelectedDates.addEventListener("click", function (e) {
+          if (e.target.classList.contains('remove-date')) {
+            delete selectedDates[e.target.previousElementSibling.value]
+            e.target.parentElement.remove()
+            e.stopPropagation()
+          }
+        })
+
+        return {
+          pre_add_event: pre_add_event
+        }
+      })()
+
+      // calendars
+      var calendars = (function () {
+        var cals = document.getElementById('calendars');
+
+        function createCalendar(calendarEl, idx) {
+          var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            showNonCurrentDates: true,
+            headerToolbar: false,
+            footerToolbar: { left: "title" },
+            dateClick: add_events_form.pre_add_event,
+            events: obj.events
+          });
+          var currentDate = Tool.dateAfterMonths(start_date, idx)
+          calendar.gotoDate(currentDate);
+          calendar.setOption("height", (window.innerHeight * 0.9 / verical))
+          calendar.render();
+        }
+
+        function render() {
+          cals.innerHTML = ""
+          for (var i = 0; i < length; i++) {
+            var calendarContainer = document.createElement("div")
+            calendarContainer.classList.add('calendar');
+            calendarContainer.style = "width:" + 93 / horizon + "%;"
+            cals.insertAdjacentElement("beforeEnd", calendarContainer)
+
+            var calendarEl = document.createElement("div")
+            calendarContainer.insertAdjacentElement("beforeEnd", calendarEl)
+            createCalendar(calendarEl, i)
+          }
+        }
+
+        function wide() {
+          cals.classList.add('wide-cal')
+          cals.classList.remove('narrow-cal')
+        }
+
+        function narrow() {
+          cals.classList.remove('wide-cal')
+          cals.classList.add('narrow-cal')
+        }
+
+        document.addEventListener('DOMContentLoaded', render);
+
+        return {
+          render: render,
+          wide: wide,
+          narrow: narrow
+        }
+      })()
+
     })()
   </script>
 </body>
