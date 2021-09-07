@@ -117,9 +117,7 @@
         verical = parseInt(layout.split("x")[0]),
         length = horizon * verical
 
-      var calendars = document.getElementById('calendars');
-
-      // close panel
+      // panel
       var panel = (function () {
         var currentPanel = null
         document.querySelector(".close").addEventListener("click", close)
@@ -131,9 +129,8 @@
             currentPanel = null
           }
           if (by_close_button) {
-            calendars.classList.add('wide-cal')
-            calendars.classList.remove('narrow-cal')
-            renderCalendars()
+            calendars.wide()
+            calendars.render()
           }
         }
 
@@ -142,10 +139,8 @@
           currentPanel = el
           currentPanel.classList.add('open-panel')
           currentPanel.classList.remove('close-panel')
-
-          calendars.classList.remove('wide-cal')
-          calendars.classList.add('narrow-cal')
-          renderCalendars()
+          calendars.narrow()
+          calendars.render()
         }
 
         return {
@@ -153,7 +148,7 @@
         }
       })()
 
-      // add events
+      // form to add events
       var addEventsForm = (function () {
         var selectedDates = {},
           elSelectedDates = document.getElementById("selected-dates")
@@ -180,36 +175,58 @@
         }
       })()
 
-      function createCalendar(calendarEl, idx) {
-        var calendar = new FullCalendar.Calendar(calendarEl, {
-          initialView: 'dayGridMonth',
-          showNonCurrentDates: true,
-          headerToolbar: false,
-          footerToolbar: { left: "title" },
-          dateClick: addEventsForm.pre_add_event,
-          events: obj.events
-        });
-        var currentDate = Tool.dateAfterMonths(start_date, idx)
-        calendar.gotoDate(currentDate);
-        calendar.setOption("height", (window.innerHeight * 0.9 / verical))
-        calendar.render();
-      }
+      // calendars
+      var calendars = (function () {
+        var cals = document.getElementById('calendars');
 
-      function renderCalendars() {
-        calendars.innerHTML = ""
-        for (var i = 0; i < length; i++) {
-          var calendarContainer = document.createElement("div")
-          calendarContainer.classList.add('calendar');
-          calendarContainer.style = "width:" + 93 / horizon + "%;"
-          calendars.insertAdjacentElement("beforeEnd", calendarContainer)
-
-          var calendarEl = document.createElement("div")
-          calendarContainer.insertAdjacentElement("beforeEnd", calendarEl)
-          createCalendar(calendarEl, i)
+        function createCalendar(calendarEl, idx) {
+          var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            showNonCurrentDates: true,
+            headerToolbar: false,
+            footerToolbar: { left: "title" },
+            dateClick: addEventsForm.pre_add_event,
+            events: obj.events
+          });
+          var currentDate = Tool.dateAfterMonths(start_date, idx)
+          calendar.gotoDate(currentDate);
+          calendar.setOption("height", (window.innerHeight * 0.9 / verical))
+          calendar.render();
         }
-      }
 
-      document.addEventListener('DOMContentLoaded', renderCalendars);
+        function render() {
+          cals.innerHTML = ""
+          for (var i = 0; i < length; i++) {
+            var calendarContainer = document.createElement("div")
+            calendarContainer.classList.add('calendar');
+            calendarContainer.style = "width:" + 93 / horizon + "%;"
+            cals.insertAdjacentElement("beforeEnd", calendarContainer)
+
+            var calendarEl = document.createElement("div")
+            calendarContainer.insertAdjacentElement("beforeEnd", calendarEl)
+            createCalendar(calendarEl, i)
+          }
+        }
+
+        function wide() {
+          cals.classList.add('wide-cal')
+          cals.classList.remove('narrow-cal')
+        }
+
+        function narrow() {
+          cals.classList.remove('wide-cal')
+          cals.classList.add('narrow-cal')
+        }
+
+        document.addEventListener('DOMContentLoaded', render);
+
+        return {
+          render: render,
+          wide: wide,
+          narrow: narrow
+        }
+      })()
+
     })()
   </script>
 </body>
