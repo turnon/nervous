@@ -149,17 +149,17 @@
       })()
 
       // form to add events
-      var addEventsForm = (function () {
+      var add_events_form = (function () {
         var selectedDates = {},
           elSelectedDates = document.getElementById("selected-dates")
         elAddEventsForm = document.getElementById('add-events')
 
         function pre_add_event(info) {
+          panel.open(elAddEventsForm)
           if (selectedDates[info.dateStr]) return;
           var input = "<div><input type='text' name='dates' value='" + info.dateStr + "'>&nbsp;<button class='remove-date'>-</button></div>"
           elSelectedDates.insertAdjacentHTML("beforeend", input)
           selectedDates[info.dateStr] = true
-          panel.open(elAddEventsForm)
         }
 
         elSelectedDates.addEventListener("click", function (e) {
@@ -185,7 +185,7 @@
             showNonCurrentDates: true,
             headerToolbar: false,
             footerToolbar: { left: "title" },
-            dateClick: addEventsForm.pre_add_event,
+            dateClick: add_events_form.pre_add_event,
             events: obj.events
           });
           var currentDate = Tool.dateAfterMonths(start_date, idx)
