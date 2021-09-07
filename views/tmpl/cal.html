@@ -99,6 +99,18 @@
       color: lightgray;
       font-style: italic;
     }
+
+    .fc .fc-scrollgrid-sync-table tr {
+      height: 16.66%
+    }
+
+    .fc-h-event .fc-event-title {
+      font-size: xx-small;
+    }
+
+    .fc .fc-daygrid-more-link {
+      font-size: xx-small;
+    }
   </style>
 </head>
 
@@ -211,6 +223,7 @@
             showNonCurrentDates: true,
             headerToolbar: false,
             footerToolbar: { left: "title" },
+            dayMaxEventRows: 2,
             dateClick: add_events_form.pre_add_event,
             events: obj.events
           });
