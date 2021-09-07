@@ -183,7 +183,7 @@
         function pre_add_event(info) {
           panel.open(elAddEventsForm)
           if (selectedDates[info.dateStr]) return;
-          var input = "<div><input type='text' name='dates' value='" + info.dateStr + "'>&nbsp;<button class='remove-date'>-</button></div>"
+          var input = "<div><input type='text' name='dates[]' value='" + info.dateStr + "'>&nbsp;<button class='remove-date'>-</button></div>"
           elSelectedDates.insertAdjacentHTML("beforeend", input)
           selectedDates[info.dateStr] = true
         }

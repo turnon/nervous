@@ -104,11 +104,3 @@ func TestConnection(t *testing.T) {
 	}
 	t.Log("tag returned: ", oneTag)
 }
-
-func parseTime(str string) time.Time {
-	rt, err := time.Parse("2006-1-2", str)
-	if err != nil {
-		panic(err)
-	}
-	return rt
-}

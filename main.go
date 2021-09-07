@@ -33,6 +33,13 @@ type event struct {
 	End   string `json:"end"`
 }
 
+type newEvents struct {
+	Dates      []string `form:"dates[]"`
+	Tag        string   `form:"tag"`
+	Name       string   `form:"name"`
+	Continuous int      `form:"continue"`
+}
+
 func main() {
 	app := fiber.New()
 
@@ -52,6 +59,13 @@ func main() {
 		bytes, _ := views.Render("cal.html", &jsonObject{calPage})
 		c.Set(fiber.HeaderContentType, fiber.MIMETextHTML)
 		return c.Send(bytes)
+	})
+
+	app.Post("/new", func(c *fiber.Ctx) error {
+		ne := newEvents{}
+		c.BodyParser(&ne)
+		ent.NewEvents(ne.Dates, ne.Tag, ne.Name, ne.Continuous)
+		return c.Redirect("/")
 	})
 
 	app.Get("/lib/:filename", func(c *fiber.Ctx) error {
