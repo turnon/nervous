@@ -13,7 +13,6 @@
 
     #calendars {
       display: inline-block;
-      width: calc(100% - 370px);
     }
 
     .calendar {
@@ -22,7 +21,6 @@
     }
 
     #add-events {
-      display: inline-block;
       vertical-align: top;
       padding: 1% 0 0 0;
       background-color: #ffffffba;
@@ -32,6 +30,29 @@
     label {
       display: inline-block;
       width: 80px;
+    }
+
+    .narrow-cal {
+      width: calc(100% - 370px);
+    }
+
+    .wide-cal {
+      width: 100%;
+    }
+
+    .open-panel {
+      display: inline-block;
+    }
+
+    .close-panel {
+      display: none;
+    }
+
+    .close {
+      float: right;
+      margin: 0;
+      font-family: none;
+      cursor: pointer;
     }
   </style>
   <style>
@@ -65,8 +86,10 @@
 <body>
   <div style="display:none">{{ .EvalObject }}</div>
 
-  <div id="calendars"></div>
-  <div id="add-events">
+  <div id="calendars" class="wide-cal"></div>
+
+  <div id="add-events" class="close-panel">
+    <pre class="close">X</pre>
     <form action="/new" method="post">
       <label style="vertical-align:top">dates:</label>
       <div id="selected-dates" style="display:inline-block;margin-left: -5px;"></div><br>
@@ -94,6 +117,42 @@
         verical = parseInt(layout.split("x")[0]),
         length = horizon * verical
 
+      var calendars = document.getElementById('calendars');
+
+      // close panel
+      var panel = (function () {
+        var currentPanel = null
+        document.querySelector(".close").addEventListener("click", close)
+
+        function close(by_close_button) {
+          if (currentPanel) {
+            currentPanel.classList.remove('open-panel')
+            currentPanel.classList.add('close-panel')
+            currentPanel = null
+          }
+          if (by_close_button) {
+            calendars.classList.add('wide-cal')
+            calendars.classList.remove('narrow-cal')
+            renderCalendars()
+          }
+        }
+
+        function open(el) {
+          close(false)
+          currentPanel = el
+          currentPanel.classList.add('open-panel')
+          currentPanel.classList.remove('close-panel')
+
+          calendars.classList.remove('wide-cal')
+          calendars.classList.add('narrow-cal')
+          renderCalendars()
+        }
+
+        return {
+          open: open
+        }
+      })()
+
       // add events
       var addEventsForm = (function () {
         var selectedDates = {},
@@ -102,10 +161,10 @@
 
         function pre_add_event(info) {
           if (selectedDates[info.dateStr]) return;
-          var input = "<div><input type='text' name='dates' value='" + info.dateStr + "'>&nbsp;<button class='remove-date'>x</button></div>"
+          var input = "<div><input type='text' name='dates' value='" + info.dateStr + "'>&nbsp;<button class='remove-date'>-</button></div>"
           elSelectedDates.insertAdjacentHTML("beforeend", input)
           selectedDates[info.dateStr] = true
-          elAddEventsForm.classList.add('expand-form')
+          panel.open(elAddEventsForm)
         }
 
         elSelectedDates.addEventListener("click", function (e) {
@@ -136,8 +195,8 @@
         calendar.render();
       }
 
-      document.addEventListener('DOMContentLoaded', function () {
-        var calendars = document.getElementById('calendars');
+      function renderCalendars() {
+        calendars.innerHTML = ""
         for (var i = 0; i < length; i++) {
           var calendarContainer = document.createElement("div")
           calendarContainer.classList.add('calendar');
@@ -148,7 +207,9 @@
           calendarContainer.insertAdjacentElement("beforeEnd", calendarEl)
           createCalendar(calendarEl, i)
         }
-      });
+      }
+
+      document.addEventListener('DOMContentLoaded', renderCalendars);
     })()
   </script>
 </body>
