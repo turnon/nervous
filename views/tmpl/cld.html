@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+<head>
+  <meta charset='utf-8' />
+  <link rel="stylesheet" type="text/css" href="lib/tui-calendar.css" />
+  <link rel="stylesheet" type="text/css" href="lib/tui-date-picker.css" />
+  <link rel="stylesheet" type="text/css" href="lib/tui-time-picker.css" />
+
+  <script src="lib/tui-code-snippet.min.js"></script>
+  <script src="lib/tui-time-picker.min.js"></script>
+  <script src="lib/tui-date-picker.min.js"></script>
+  <script src="lib/tui-calendar.js"></script>
+
+  <script src='lib/tool.js'></script>
+  <style>
+    .calendaro {
+      border: 1px solid #e5e5e5;
+      border-top: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div style="display:none">{{ .EvalObject }}</div>
+
+  <div id="calendaro" class="calendaro"></div>
+
+
+  <script>
+    var calendar = new tui.Calendar('#calendaro', {
+      defaultView: 'month',
+      taskView: true,
+      useCreationPopup: true,
+      useDetailPopup: true,
+    });
+
+    calendar.on('beforeCreateSchedule', function (event) {
+      console.log(event)
+      var schedule = {
+        id: '1',
+        title: event.title,
+        category: 'time',
+        start: event.start,
+        end: event.end
+      }
+      calendar.createSchedules([schedule]);
+    });
+
+    calendar.on('beforeUpdateSchedule', function (event) {
+      console.log(event)
+      calendar.updateSchedule(event.schedule.id, event.schedule.calendarId, event.changes);
+    });
+
+    calendar.on('beforeDeleteSchedule', function (event) {
+      console.log(event)
+      calendar.deleteSchedule(event.schedule.id, event.schedule.calendarId)
+    });
+  </script>
+</body>
+
+</html>
